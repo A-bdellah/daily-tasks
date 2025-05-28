@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class", // or 'media'
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            colors: {
+              primary: {
+                light: "#3b82f6", // blue-500
+                DEFAULT: "#2563eb", // blue-600
+                dark: "#1d4ed8", // blue-700
+              },
+              secondary: {
+                light: "#10b981", // emerald-500
+                DEFAULT: "#059669", // emerald-600
+                dark: "#047857", // emerald-700
+              },
+              danger: {
+                light: "#ef4444", // red-500
+                DEFAULT: "#dc2626", // red-600
+                dark: "#b91c1c", // red-700
+              },
+              // Light theme
+              lightBg: "#f9fafb", // gray-50
+              lightText: "#1f2937", // gray-800
+              lightCard: "#ffffff",
+              lightBorder: "#e5e7eb", // gray-200
+              // Dark theme
+              darkBg: "#111827", // gray-900
+              darkText: "#f3f4f6", // gray-100
+              darkCard: "#1f2937", // gray-800
+              darkBorder: "#374151", // gray-700
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        transition: background-color 0.3s, color 0.3s;
+      }
+      .task-item:hover {
+        background-color: rgba(0, 0, 0, 0.03);
+      }
+      .dark .task-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+      .progress-bar-inner {
+        transition: width 0.3s ease-in-out;
+      }
+      /* Custom scrollbar for task lists */
+      .task-list::-webkit-scrollbar,
+      .gemini-suggestions-list::-webkit-scrollbar {
+        width: 8px;
+      }
+      .task-list::-webkit-scrollbar-track,
+      .gemini-suggestions-list::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .task-list::-webkit-scrollbar-thumb,
+      .gemini-suggestions-list::-webkit-scrollbar-thumb {
+        background-color: #d1d5db; /* gray-400 */
+        border-radius: 10px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+      }
+      .dark .task-list::-webkit-scrollbar-thumb,
+      .dark .gemini-suggestions-list::-webkit-scrollbar-thumb {
+        background-color: #4b5563; /* gray-600 */
+      }
+      .modal,
+      .gemini-modal {
+        display: none; /* Hidden by default */
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-content,
+      .gemini-modal-content {
+        margin: auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 90%;
+      }
+      .modal-content {
+        max-width: 400px;
+      }
+      .gemini-modal-content {
+        max-width: 500px;
+      }
+
+      .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border-left-color: #09f;
+        animation: spin 1s ease infinite;
+        margin: 20px auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .password-toggle-icon {
+        position: absolute;
+        top: 50%;
+        right: 0.75rem; /* 12px */
+        transform: translateY(-50%);
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body class="bg-lightBg text-lightText dark:bg-darkBg dark:text-darkText">
+    <div
+      id="auth-view"
+      class="min-h-screen flex flex-col bg-lightBg dark:bg-darkBg"
+    >
+      <header id="auth-header" class="bg-lightCard dark:bg-darkCard shadow-md">
+        <div
+          class="container mx-auto px-4 py-3 flex items-center justify-between"
+        >
+          <h1 class="text-2xl font-bold text-primary dark:text-primary-light">
+            Task Planner
+          </h1>
+          <button
+            id="theme-toggle-button-auth"
+            class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          ></button>
+        </div>
+      </header>
+
+      <div class="flex-grow flex flex-col items-center justify-center p-4">
+        <div
+          class="w-full max-w-md bg-lightCard dark:bg-darkCard p-8 rounded-xl shadow-2xl"
+        >
+          <h1
+            class="text-3xl font-bold text-center text-primary dark:text-primary-light mb-8"
+          >
+            Task Planner
+          </h1>
+
+          <form id="signin-form" class="space-y-6">
+            <h2 class="text-xl font-semibold text-center">
+              Sign in to get started
+            </h2>
+            <div>
+              <label for="signin-email" class="block text-sm font-medium"
+                >Email</label
+              >
+              <input
+                type="email"
+                id="signin-email"
+                required
+                class="mt-1 block w-full px-3 py-2 border border-lightBorder dark:border-darkBorder rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white sm:text-sm"
+                placeholder="you@example.com"
+              />
+            </div>
+            <div>
+              <label for="signin-password" class="block text-sm font-medium"
+                >Password</label
+              >
+              <div class="relative mt-1">
+                <input
+                  type="password"
+                  id="signin-password"
+                  required
+                  class="block w-full px-3 py-2 border border-lightBorder dark:border-darkBorder rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white sm:text-sm pr-10"
+                  placeholder="••••••••"
+                />
+                <span
+                  id="toggle-signin-password"
+                  class="password-toggle-icon text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                >
+                </span>
+              </div>
+            </div>
+            <button
+              type="submit"
+              class="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-md shadow-md transition duration-150"
+            >
+              Sign In
+            </button>
+            <p id="signin-error" class="text-sm text-red-500 text-center"></p>
+          </form>
+
+          <form id="signup-form" class="space-y-6 hidden">
+            <h2 class="text-xl font-semibold text-center">Create an account</h2>
+            <div>
+              <label for="signup-email" class="block text-sm font-medium"
+                >Email</label
+              >
+              <input
+                type="email"
+                id="signup-email"
+                required
+                class="mt-1 block w-full px-3 py-2 border border-lightBorder dark:border-darkBorder rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white sm:text-sm"
+                placeholder="you@example.com"
+              />
+            </div>
+            <div>
+              <label for="signup-password" class="block text-sm font-medium"
+                >Password (min. 6 characters)</label
+              >
+              <div class="relative mt-1">
+                <input
+                  type="password"
+                  id="signup-password"
+                  required
+                  class="block w-full px-3 py-2 border border-lightBorder dark:border-darkBorder rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white sm:text-sm pr-10"
+                  placeholder="••••••••"
+                />
+                <span
+                  id="toggle-signup-password"
+                  class="password-toggle-icon text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                >
+                </span>
+              </div>
+            </div>
+            <button
+              type="submit"
+              class="w-full bg-secondary hover:bg-secondary-dark text-white font-semibold py-2 px-4 rounded-md shadow-md transition duration-150"
+            >
+              Sign Up
+            </button>
+            <p id="signup-error" class="text-sm text-red-500 text-center"></p>
+          </form>
+
+          <div class="text-center mt-4">
+            <button
+              id="toggle-auth-mode"
+              class="text-sm text-primary hover:underline"
+            >
+              Don't have an account? Sign Up
+            </button>
+          </div>
+          <div class="text-center mt-2">
+            <button
+              id="forgot-password-button"
+              class="text-sm text-primary hover:underline"
+            >
+              Forgot Password?
+            </button>
+          </div>
+
+          <div class="my-4 flex items-center">
+            <hr class="flex-grow border-lightBorder dark:border-darkBorder" />
+            <span class="mx-4 text-xs text-gray-500 dark:text-gray-400"
+              >OR</span
+            >
+            <hr class="flex-grow border-lightBorder dark:border-darkBorder" />
+          </div>
+
+          <button
+            id="google-signin-button"
+            class="w-full mb-3 bg-white dark:bg-gray-700 border border-red-500 dark:border-red-400 text-red-500 dark:text-red-300 hover:bg-red-50 dark:hover:bg-gray-600 font-medium py-2 px-4 rounded-md shadow-sm transition duration-150 flex items-center justify-center"
+          >
+            <svg
+              class="w-5 h-5 mr-2"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+              <path d="M1 1h22v22H1z" fill="none" />
+            </svg>
+            Sign in with Google
+          </button>
+          <button
+            id="anonymous-signin-button"
+            class="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-md shadow-md transition duration-150"
+          >
+            Continue anonymously
+          </button>
+        </div>
+        <footer
+          class="w-full max-w-md mt-8 pt-4 border-t border-lightBorder dark:border-darkBorder text-center text-sm text-gray-500 dark:text-gray-400"
+        >
+          <p>
+            © <span id="auth-current-year"></span> Task Planner. All rights
+            reserved.
+          </p>
+        </footer>
+      </div>
+    </div>
+
+    <div id="app-view" class="hidden">
+      <header class="bg-lightCard dark:bg-darkCard shadow-md sticky top-0 z-50">
+        <div
+          class="container mx-auto px-4 py-3 flex items-center justify-between"
+        >
+          <h1 class="text-2xl font-bold text-primary dark:text-primary-light">
+            Task Planner
+          </h1>
+          <div class="flex items-center space-x-3 sm:space-x-4">
+            <div class="text-xs sm:text-sm">
+              <span
+                id="user-email-display"
+                class="block text-right text-lightText dark:text-darkText truncate max-w-[100px] sm:max-w-[150px] md:max-w-xs"
+              ></span>
+              <span
+                id="user-id-display"
+                class="block text-right text-gray-500 dark:text-gray-400 text-[10px] sm:text-xs truncate max-w-[100px] sm:max-w-[150px] md:max-w-xs"
+              ></span>
+            </div>
+            <button
+              id="theme-toggle-button-app"
+              class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            ></button>
+            <button
+              id="sign-out-button"
+              class="bg-danger hover:bg-danger-dark text-white text-sm font-medium py-2 px-3 rounded-md shadow transition duration-150"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main
+        class="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4"
+      >
+        <section
+          id="daily-tasks-section"
+          class="bg-lightCard dark:bg-darkCard p-4 sm:p-6 rounded-xl shadow-lg flex flex-col"
+        >
+          <div
+            class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2"
+          >
+            <h2
+              class="text-xl sm:text-2xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-400 dark:from-blue-400 dark:to-cyan-300"
+            >
+              Daily Tasks
+            </h2>
+            <input
+              type="date"
+              id="daily-date-picker"
+              class="p-2 border border-lightBorder dark:border-darkBorder rounded-md dark:bg-gray-700 dark:text-white focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div class="flex mb-4 gap-2">
+            <input
+              type="text"
+              id="new-daily-task-input"
+              placeholder="Add new daily task"
+              class="flex-grow p-2 border border-lightBorder dark:border-darkBorder rounded-md dark:bg-gray-700 dark:text-white focus:ring-primary focus:border-primary"
+            />
+            <button
+              id="add-daily-task-button"
+              class="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-md shadow transition duration-150"
+            >
+              Add
+            </button>
+          </div>
+          <div class="mb-3">
+            <div class="flex justify-between text-sm mb-1">
+              <span
+                class="font-medium text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-400 dark:from-blue-400 dark:to-cyan-300"
+                >Progress</span
+              >
+              <span id="daily-progress-text">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+              <div
+                id="daily-progress-bar"
+                class="bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 h-2.5 rounded-full progress-bar-inner"
+                style="width: 0%"
+              ></div>
+            </div>
+            <p
+              id="daily-completion-summary"
+              class="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center"
+            >
+              0 of 0 completed
+            </p>
+          </div>
+          <ul
+            id="daily-task-list"
+            class="task-list space-y-2 overflow-y-auto flex-grow max-h-[300px] sm:max-h-[400px] pr-1"
+          ></ul>
+          <div
+            class="mt-6 pt-4 border-t border-lightBorder dark:border-darkBorder space-y-2"
+          >
+            <h3 class="text-md font-semibold mb-2">Bulk Actions (Daily)</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                id="apply-next-30-add"
+                class="w-full text-sm bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-3 rounded-md shadow transition duration-150"
+              >
+                Apply to Next 30 (Add)
+              </button>
+              <button
+                id="apply-next-30-replace"
+                class="w-full text-sm bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-3 rounded-md shadow transition duration-150"
+              >
+                Apply to Next 30 (Replace)
+              </button>
+            </div>
+            <button
+              id="remove-next-30"
+              class="w-full text-sm bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-3 rounded-md shadow transition duration-150 mt-2"
+            >
+              Remove For Next 30 Days
+            </button>
+          </div>
+        </section>
+
+        <section
+          id="monthly-goals-section"
+          class="bg-lightCard dark:bg-darkCard p-4 sm:p-6 rounded-xl shadow-lg flex flex-col"
+        >
+          <div
+            class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2"
+          >
+            <h2
+              class="text-xl sm:text-2xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-emerald-400 dark:from-green-400 dark:to-emerald-300"
+            >
+              Monthly Goals
+            </h2>
+            <input
+              type="month"
+              id="monthly-goal-picker"
+              class="p-2 border border-lightBorder dark:border-darkBorder rounded-md dark:bg-gray-700 dark:text-white focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div class="flex mb-4 gap-2">
+            <input
+              type="text"
+              id="new-monthly-goal-input"
+              placeholder="Add new monthly goal"
+              class="flex-grow p-2 border border-lightBorder dark:border-darkBorder rounded-md dark:bg-gray-700 dark:text-white focus:ring-primary focus:border-primary"
+            />
+            <button
+              id="add-monthly-goal-button"
+              class="bg-secondary hover:bg-secondary-dark text-white font-semibold py-2 px-4 rounded-md shadow transition duration-150"
+            >
+              Add
+            </button>
+          </div>
+          <div class="mb-3">
+            <div class="flex justify-between text-sm mb-1">
+              <span
+                class="font-medium text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-emerald-400 dark:from-green-400 dark:to-emerald-300"
+                >Progress</span
+              >
+              <span id="monthly-progress-text">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+              <div
+                id="monthly-progress-bar"
+                class="bg-gradient-to-r from-green-500 via-green-400 to-lime-400 h-2.5 rounded-full progress-bar-inner"
+                style="width: 0%"
+              ></div>
+            </div>
+            <p
+              id="monthly-completion-summary"
+              class="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center"
+            >
+              0 of 0 completed
+            </p>
+          </div>
+          <ul
+            id="monthly-goal-list"
+            class="task-list space-y-2 overflow-y-auto flex-grow max-h-[300px] sm:max-h-[400px] pr-1"
+          ></ul>
+          <div
+            class="mt-6 pt-4 border-t border-lightBorder dark:border-darkBorder space-y-2"
+          >
+            <button
+              id="remove-current-month-goals"
+              class="w-full text-sm bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-3 rounded-md shadow transition duration-150"
+            >
+              Remove All Goals (This Month)
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <footer
+        class="text-center py-8 mt-8 border-t border-lightBorder dark:border-darkBorder"
+      >
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          © <span id="app-current-year"></span> Task Planner. All rights
+          reserved.
+        </p>
+      </footer>
+    </div>
+
+    <div id="custom-modal" class="modal">
+      <div
+        class="modal-content bg-lightCard dark:bg-darkCard shadow-xl rounded-lg p-6"
+      >
+        <h3 id="modal-title" class="text-lg font-semibold mb-4">Modal Title</h3>
+        <p id="modal-message" class="text-sm mb-6">Modal message goes here.</p>
+        <div id="modal-actions" class="flex justify-end space-x-3">
+          <button
+            id="modal-confirm-button"
+            class="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-md shadow"
+          >
+            Confirm
+          </button>
+          <button
+            id="modal-cancel-button"
+            class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-md shadow"
+          >
+            Cancel
+          </button>
+          <button
+            id="modal-ok-button"
+            class="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-md shadow"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gemini-suggestions-modal" class="gemini-modal">
+      <div
+        class="gemini-modal-content bg-lightCard dark:bg-darkCard shadow-xl rounded-lg p-6"
+      >
+        <div class="flex justify-between items-center mb-4">
+          <h3 id="gemini-modal-title" class="text-lg font-semibold">
+            ✨ AI Suggested Sub-Tasks
+          </h3>
+          <button
+            id="gemini-modal-close-button"
+            class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-6 h-6"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-300 mb-1">
+          For goal: "<span
+            id="gemini-original-goal-text"
+            class="font-medium"
+          ></span
+          >"
+        </p>
+        <div id="gemini-loading-indicator" class="hidden text-center py-4">
+          <div class="spinner"></div>
+          <p>Generating suggestions with Gemini AI...</p>
+        </div>
+        <div
+          id="gemini-error-message"
+          class="hidden text-red-500 text-sm py-2"
+        ></div>
+        <ul
+          id="gemini-suggestions-list"
+          class="gemini-suggestions-list space-y-2 max-h-60 overflow-y-auto my-4 border-t border-b border-lightBorder dark:border-darkBorder py-4"
+        ></ul>
+        <div id="gemini-suggestions-actions" class="hidden">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Select suggestions and add them as new tasks/goals.
+          </p>
+          <div
+            class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3"
+          >
+            <button
+              id="gemini-add-as-daily-button"
+              class="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-md shadow text-sm"
+            >
+              Add Selected as Daily Tasks (for today)
+            </button>
+            <button
+              id="gemini-add-as-monthly-button"
+              class="bg-secondary hover:bg-secondary-dark text-white font-semibold py-2 px-4 rounded-md shadow text-sm"
+            >
+              Add Selected as Monthly Goals
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      // Firebase App (the core Firebase SDK) is always required and must be listed first
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+      // Add SDKs for Firebase products that you want to use
+      import {
+        getAuth,
+        onAuthStateChanged,
+        createUserWithEmailAndPassword,
+        signInWithEmailAndPassword,
+        signOut,
+        signInAnonymously,
+        sendPasswordResetEmail,
+        signInWithCustomToken, // Added for Canvas
+        GoogleAuthProvider, // Added for Google Sign-In
+        signInWithPopup, // Added for Google Sign-In
+      } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+      import {
+        getFirestore,
+        doc,
+        setDoc,
+        getDoc,
+        updateDoc,
+        deleteDoc,
+        collection,
+        query,
+        where,
+        getDocs,
+        onSnapshot,
+        writeBatch,
+        Timestamp,
+      } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+      // Your web app's Firebase configuration
+      const firebaseConfig =
+        typeof __firebase_config !== "undefined"
+          ? JSON.parse(__firebase_config)
+          : {
+              apiKey: "AIzaSyA6ODjEfb1gzIP2FQV8PXr8HM0YLmp-M9U",
+              authDomain: "task-planner-cf25a.firebaseapp.com",
+              projectId: "task-planner-cf25a",
+              storageBucket: "task-planner-cf25a.firebasestorage.app",
+              messagingSenderId: "530070232171",
+              appId: "1:530070232171:web:9b0536fb2d69d09adf652e",
+              measurementId: "G-TJEQQW8MYV",
+            };
+
+      console.log("Using Firebase Config:", firebaseConfig);
+      if (
+        firebaseConfig.apiKey === "YOUR_API_KEY" &&
+        typeof __firebase_config === "undefined"
+      ) {
+        console.warn(
+          "WARNING: Using placeholder Firebase configuration. Please replace with your actual project config if running locally."
+        );
+      }
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      const appId =
+        typeof __app_id !== "undefined" ? __app_id : "default-task-planner-app";
+      let userId = null;
+      let unsubscribeDailyTasks = () => {};
+      let unsubscribeMonthlyGoals = () => {};
+      let unsubscribeUserPrefs = () => {};
+
+      // DOM Elements
+      const authView = document.getElementById("auth-view");
+      const appView = document.getElementById("app-view");
+      const signinForm = document.getElementById("signin-form");
+      const signupForm = document.getElementById("signup-form");
+      const toggleAuthModeButton = document.getElementById("toggle-auth-mode");
+      const googleSigninButton = document.getElementById(
+        "google-signin-button"
+      );
+      const anonymousSigninButton = document.getElementById(
+        "anonymous-signin-button"
+      );
+      const forgotPasswordButton = document.getElementById(
+        "forgot-password-button"
+      );
+      const signinError = document.getElementById("signin-error");
+      const signupError = document.getElementById("signup-error");
+
+      const userEmailDisplay = document.getElementById("user-email-display");
+      const userIdDisplay = document.getElementById("user-id-display");
+      const themeToggleButtonApp = document.getElementById(
+        "theme-toggle-button-app"
+      ); // Updated ID
+      const themeToggleButtonAuth = document.getElementById(
+        "theme-toggle-button-auth"
+      ); // New ID for auth view
+      const signOutButton = document.getElementById("sign-out-button");
+
+      const dailyDatePicker = document.getElementById("daily-date-picker");
+      const newDailyTaskInput = document.getElementById("new-daily-task-input");
+      const addDailyTaskButton = document.getElementById(
+        "add-daily-task-button"
+      );
+      const dailyProgressBar = document.getElementById("daily-progress-bar");
+      const dailyProgressText = document.getElementById("daily-progress-text");
+      const dailyCompletionSummary = document.getElementById(
+        "daily-completion-summary"
+      );
+      const dailyTaskList = document.getElementById("daily-task-list");
+
+      const monthlyGoalPicker = document.getElementById("monthly-goal-picker");
+      const newMonthlyGoalInput = document.getElementById(
+        "new-monthly-goal-input"
+      );
+      const addMonthlyGoalButton = document.getElementById(
+        "add-monthly-goal-button"
+      );
+      const monthlyProgressBar = document.getElementById(
+        "monthly-progress-bar"
+      );
+      const monthlyProgressText = document.getElementById(
+        "monthly-progress-text"
+      );
+      const monthlyCompletionSummary = document.getElementById(
+        "monthly-completion-summary"
+      );
+      const monthlyGoalList = document.getElementById("monthly-goal-list");
+      const removeCurrentMonthGoalsBtn = document.getElementById(
+        "remove-current-month-goals"
+      );
+
+      const applyNext30AddBtn = document.getElementById("apply-next-30-add");
+      const applyNext30ReplaceBtn = document.getElementById(
+        "apply-next-30-replace"
+      );
+      const removeNext30Btn = document.getElementById("remove-next-30");
+
+      const customModal = document.getElementById("custom-modal");
+      const modalTitle = document.getElementById("modal-title");
+      const modalMessage = document.getElementById("modal-message");
+      const modalConfirmButton = document.getElementById(
+        "modal-confirm-button"
+      );
+      const modalCancelButton = document.getElementById("modal-cancel-button");
+      const modalOkButton = document.getElementById("modal-ok-button");
+      let modalConfirmCallback = null;
+
+      const geminiSuggestionsModal = document.getElementById(
+        "gemini-suggestions-modal"
+      );
+      const geminiModalCloseButton = document.getElementById(
+        "gemini-modal-close-button"
+      );
+      const geminiOriginalGoalText = document.getElementById(
+        "gemini-original-goal-text"
+      );
+      const geminiLoadingIndicator = document.getElementById(
+        "gemini-loading-indicator"
+      );
+      const geminiErrorMessage = document.getElementById(
+        "gemini-error-message"
+      );
+      const geminiSuggestionsList = document.getElementById(
+        "gemini-suggestions-list"
+      );
+      const geminiSuggestionsActions = document.getElementById(
+        "gemini-suggestions-actions"
+      );
+      const geminiAddAsDailyButton = document.getElementById(
+        "gemini-add-as-daily-button"
+      );
+      const geminiAddAsMonthlyButton = document.getElementById(
+        "gemini-add-as-monthly-button"
+      );
+
+      const toggleSigninPassword = document.getElementById(
+        "toggle-signin-password"
+      );
+      const toggleSignupPassword = document.getElementById(
+        "toggle-signup-password"
+      );
+      const signinPasswordInput = document.getElementById("signin-password");
+      const signupPasswordInput = document.getElementById("signup-password");
+
+      const eyeIconSVG = `
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>`;
+      const eyeSlashIconSVG = `
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+            </svg>`;
+
+      function showModal(
+        title,
+        message,
+        type = "alert",
+        confirmCallback = null
+      ) {
+        modalTitle.textContent = title;
+        modalMessage.innerHTML = message;
+        modalConfirmCallback = confirmCallback;
+        modalConfirmButton.classList.toggle("hidden", type !== "confirm");
+        modalCancelButton.classList.toggle("hidden", type !== "confirm");
+        modalOkButton.classList.toggle("hidden", type === "confirm");
+        customModal.style.display = "flex";
+      }
+      function hideModal() {
+        customModal.style.display = "none";
+        modalConfirmCallback = null;
+      }
+      modalConfirmButton.addEventListener("click", () => {
+        if (modalConfirmCallback) modalConfirmCallback();
+        hideModal();
+      });
+      modalCancelButton.addEventListener("click", hideModal);
+      modalOkButton.addEventListener("click", hideModal);
+
+      function showGeminiSuggestionsModal(originalGoal) {
+        geminiOriginalGoalText.textContent = originalGoal;
+        geminiSuggestionsList.innerHTML = "";
+        geminiErrorMessage.classList.add("hidden");
+        geminiErrorMessage.textContent = "";
+        geminiLoadingIndicator.classList.remove("hidden");
+        geminiSuggestionsActions.classList.add("hidden");
+        geminiSuggestionsModal.style.display = "flex";
+      }
+      function hideGeminiSuggestionsModal() {
+        geminiSuggestionsModal.style.display = "none";
+      }
+      geminiModalCloseButton.addEventListener(
+        "click",
+        hideGeminiSuggestionsModal
+      );
+
+      const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-6.364-.386 1.591-1.591M3 12h2.25m.386-6.364 1.591 1.591" /></svg>`;
+      const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>`;
+
+      function applyTheme(theme) {
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        const icon = theme === "dark" ? sunIcon : moonIcon;
+        if (themeToggleButtonApp) themeToggleButtonApp.innerHTML = icon;
+        if (themeToggleButtonAuth) themeToggleButtonAuth.innerHTML = icon;
+      }
+      async function saveThemePreference(theme) {
+        if (userId && auth.currentUser && !auth.currentUser.isAnonymous) {
+          try {
+            await setDoc(
+              doc(db, `artifacts/${appId}/users/${userId}/preferences/doc`),
+              { theme },
+              { merge: true }
+            );
+          } catch (error) {
+            console.error("Error saving theme preference:", error);
+          }
+        } else {
+          localStorage.setItem("taskPlannerTheme", theme);
+        }
+      }
+
+      function setupThemeToggleListener(button) {
+        if (button) {
+          button.addEventListener("click", () => {
+            const newTheme = document.documentElement.classList.contains("dark")
+              ? "light"
+              : "dark";
+            applyTheme(newTheme);
+            saveThemePreference(newTheme);
+          });
+        }
+      }
+      setupThemeToggleListener(themeToggleButtonApp);
+      setupThemeToggleListener(themeToggleButtonAuth);
+
+      async function loadThemePreference() {
+        let preferredTheme = "light";
+        if (userId && auth.currentUser && !auth.currentUser.isAnonymous) {
+          try {
+            const docSnap = await getDoc(
+              doc(db, `artifacts/${appId}/users/${userId}/preferences/doc`)
+            );
+            if (docSnap.exists() && docSnap.data().theme)
+              preferredTheme = docSnap.data().theme;
+          } catch (error) {
+            console.error("Error loading theme preference:", error);
+          }
+        } else {
+          const storedTheme = localStorage.getItem("taskPlannerTheme");
+          if (storedTheme) preferredTheme = storedTheme;
+        }
+        applyTheme(preferredTheme);
+      }
+
+      function setupPasswordToggle(toggleElement, passwordInputElement) {
+        if (toggleElement && passwordInputElement) {
+          toggleElement.innerHTML = eyeSlashIconSVG;
+          toggleElement.addEventListener("click", () => {
+            const isPassword = passwordInputElement.type === "password";
+            passwordInputElement.type = isPassword ? "text" : "password";
+            toggleElement.innerHTML = isPassword ? eyeIconSVG : eyeSlashIconSVG;
+          });
+        }
+      }
+      setupPasswordToggle(toggleSigninPassword, signinPasswordInput);
+      setupPasswordToggle(toggleSignupPassword, signupPasswordInput);
+
+      onAuthStateChanged(auth, async (user) => {
+        unsubscribeDailyTasks();
+        unsubscribeMonthlyGoals();
+        unsubscribeUserPrefs();
+        if (user) {
+          userId = user.uid;
+          authView.classList.add("hidden");
+          appView.classList.remove("hidden");
+          userEmailDisplay.textContent = user.isAnonymous
+            ? "Anonymous User"
+            : user.email;
+          userIdDisplay.textContent = `ID: ${user.uid.substring(0, 8)}...`;
+          initializePickers();
+          loadThemePreference();
+          loadDailyTasks();
+          loadMonthlyGoals();
+          if (!user.isAnonymous) {
+            unsubscribeUserPrefs = onSnapshot(
+              doc(db, `artifacts/${appId}/users/${userId}/preferences/doc`),
+              (docSnap) => {
+                if (docSnap.exists() && docSnap.data().theme)
+                  applyTheme(docSnap.data().theme);
+              }
+            );
+          }
+        } else {
+          userId = null;
+          authView.classList.remove("hidden");
+          appView.classList.add("hidden");
+          userEmailDisplay.textContent = "";
+          userIdDisplay.textContent = "";
+          dailyTaskList.innerHTML = "";
+          monthlyGoalList.innerHTML = "";
+          updateProgress("daily", [], 0);
+          updateProgress("monthly", [], 0);
+          loadThemePreference(); // Load theme even if not logged in (from localStorage)
+        }
+      });
+
+      signinForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        signinError.textContent = "";
+        const email = signinForm["signin-email"].value;
+        const password = signinPasswordInput.value;
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+          console.error("Sign in error:", error);
+          if (error.code === "auth/operation-not-allowed")
+            signinError.textContent =
+              "Email/Password sign-in is not enabled. Check Firebase settings.";
+          else if (
+            error.code === "auth/invalid-credential" ||
+            error.code === "auth/user-not-found" ||
+            error.code === "auth/wrong-password"
+          )
+            signinError.textContent = "Invalid email or password.";
+          else signinError.textContent = error.message;
+        }
+      });
+
+      signupForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        signupError.textContent = "";
+        const email = signupForm["signup-email"].value;
+        const password = signupPasswordInput.value;
+        if (password.length < 6) {
+          signupError.textContent = "Password min 6 characters.";
+          return;
+        }
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+          console.error("Sign up error:", error);
+          if (error.code === "auth/operation-not-allowed")
+            signupError.textContent =
+              "Email/Password sign-up is not enabled. Check Firebase settings.";
+          else signupError.textContent = error.message;
+        }
+      });
+
+      googleSigninButton.addEventListener("click", async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+          await signInWithPopup(auth, provider);
+        } catch (error) {
+          console.error("Google sign-in error: ", error);
+          if (error.code === "auth/popup-closed-by-user") {
+            showModal(
+              "Google Sign-In",
+              "Sign-in popup closed before completion.",
+              "alert"
+            );
+          } else if (error.code === "auth/operation-not-allowed") {
+            showModal(
+              "Google Sign-In",
+              "Google Sign-In is not enabled. Please check your Firebase project settings.",
+              "alert"
+            );
+          } else if (error.code === "auth/unauthorized-domain") {
+            showModal(
+              "Google Sign-In Error",
+              "This domain is not authorized for Google Sign-In. Please add it to the authorized domains list in your Firebase project's Authentication settings (under 'Settings' tab). Your current domain is: " +
+                window.location.hostname,
+              "alert"
+            );
+          } else {
+            showModal("Google Sign-In Error", error.message, "alert");
+          }
+        }
+      });
+
+      toggleAuthModeButton.addEventListener("click", () => {
+        signinForm.classList.toggle("hidden");
+        signupForm.classList.toggle("hidden");
+        toggleAuthModeButton.textContent = signinForm.classList.contains(
+          "hidden"
+        )
+          ? "Already have an account? Sign In"
+          : "Don't have an account? Sign Up";
+        signinError.textContent = "";
+        signupError.textContent = "";
+      });
+
+      forgotPasswordButton.addEventListener("click", async () => {
+        const email =
+          signinForm["signin-email"].value || signupForm["signup-email"].value;
+        if (!email) {
+          showModal("Forgot Password", "Enter email first.", "alert");
+          return;
+        }
+        try {
+          await sendPasswordResetEmail(auth, email);
+          showModal("Password Reset", `Email sent to ${email}.`, "alert");
+        } catch (error) {
+          console.error("Forgot password error:", error);
+          showModal("Error", error.message, "alert");
+        }
+      });
+
+      anonymousSigninButton.addEventListener("click", async () => {
+        try {
+          await signInAnonymously(auth);
+        } catch (error) {
+          console.error("Anonymous sign in error:", error);
+          if (error.code === "auth/operation-not-allowed")
+            showModal(
+              "Error",
+              "Anonymous sign-in not enabled. Check Firebase settings.",
+              "alert"
+            );
+          else
+            showModal(
+              "Error",
+              "Could not sign in anonymously. " + error.message,
+              "alert"
+            );
+        }
+      });
+
+      signOutButton.addEventListener("click", async () => {
+        try {
+          await signOut(auth);
+        } catch (error) {
+          console.error("Sign out error:", error);
+          showModal("Error", "Could not sign out. " + error.message, "alert");
+        }
+      });
+
+      function getCurrentDateString() {
+        const t = new Date();
+        return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}-${String(t.getDate()).padStart(2, "0")}`;
+      }
+      function getCurrentMonthString() {
+        const t = new Date();
+        return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}`;
+      }
+      function initializePickers() {
+        dailyDatePicker.value = getCurrentDateString();
+        monthlyGoalPicker.value = getCurrentMonthString();
+        dailyDatePicker.addEventListener("change", loadDailyTasks);
+        monthlyGoalPicker.addEventListener("change", loadMonthlyGoals);
+      }
+
+      function renderTasks(tasks, type) {
+        const listEl = type === "daily" ? dailyTaskList : monthlyGoalList;
+        listEl.innerHTML = "";
+        if (!tasks || tasks.length === 0) {
+          const li = document.createElement("li");
+          li.textContent =
+            type === "daily"
+              ? "No tasks for this day."
+              : "No goals for this month.";
+          li.className = "text-center text-gray-500 dark:text-gray-400 py-4";
+          listEl.appendChild(li);
+          updateProgress(type, [], 0);
+          return;
+        }
+        tasks.forEach((task) => {
+          const li = document.createElement("li");
+          li.className = `task-item flex items-center justify-between p-3 rounded-lg border border-lightBorder dark:border-darkBorder bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+            task.completed ? "opacity-60" : ""
+          }`;
+          li.dataset.id = task.id;
+          const content = document.createElement("div");
+          content.className = "flex items-center flex-grow mr-2 min-w-0";
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = task.completed;
+          cb.className =
+            "form-checkbox h-5 w-5 text-primary rounded focus:ring-primary-dark mr-3 cursor-pointer flex-shrink-0";
+          cb.addEventListener("change", () =>
+            toggleTaskComplete(task.id, type, cb.checked)
+          );
+          const span = document.createElement("span");
+          span.textContent = task.text;
+          span.className = `flex-grow truncate ${
+            task.completed
+              ? "line-through text-gray-500 dark:text-gray-400"
+              : "text-lightText dark:text-darkText"
+          }`;
+          const input = document.createElement("input");
+          input.type = "text";
+          input.value = task.text;
+          input.className =
+            "hidden flex-grow p-1 border border-lightBorder dark:border-darkBorder rounded-md dark:bg-gray-700 dark:text-white focus:ring-primary focus:border-primary";
+          input.addEventListener("blur", () =>
+            saveTaskText(task.id, type, input, span)
+          );
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") input.blur();
+            if (e.key === "Escape") {
+              input.value = task.text;
+              input.classList.add("hidden");
+              span.classList.remove("hidden");
+            }
+          });
+          content.append(cb, span, input);
+          const actions = document.createElement("div");
+          actions.className =
+            "flex items-center space-x-1 sm:space-x-2 flex-shrink-0";
+          if (type === "monthly") {
+            const btn = document.createElement("button");
+            btn.innerHTML = `✨`;
+            btn.className =
+              "p-1 rounded hover:bg-yellow-100 dark:hover:bg-yellow-700 text-yellow-500 dark:text-yellow-400 text-lg";
+            btn.title = "✨ Breakdown Goal with AI";
+            btn.addEventListener("click", () =>
+              handleBreakdownGoalClick(task.id, task.text)
+            );
+            actions.appendChild(btn);
+          }
+          const editBtn = document.createElement("button");
+          editBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>`;
+          editBtn.className =
+            "p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600";
+          editBtn.title = "Edit";
+          editBtn.addEventListener("click", () => {
+            span.classList.add("hidden");
+            input.classList.remove("hidden");
+            input.focus();
+          });
+          const delBtn = document.createElement("button");
+          delBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12.56 0c.342.052.682.107 1.022.166m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>`;
+          delBtn.className =
+            "p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600";
+          delBtn.title = "Delete";
+          delBtn.addEventListener("click", () => deleteTask(task.id, type));
+          actions.append(editBtn, delBtn);
+          li.append(content, actions);
+          listEl.appendChild(li);
+        });
+      }
+
+      async function saveTaskText(taskId, type, inputEl, spanEl) {
+        const newText = inputEl.value.trim();
+        if (!newText || newText === spanEl.textContent) {
+          inputEl.value = spanEl.textContent;
+          inputEl.classList.add("hidden");
+          spanEl.classList.remove("hidden");
+          return;
+        }
+        const dateOrMonth =
+          type === "daily" ? dailyDatePicker.value : monthlyGoalPicker.value;
+        const coll =
+          type === "daily" ? "dailyTasksByDate" : "monthlyGoalsByMonth";
+        const field = type === "daily" ? "tasks" : "goals";
+        const docRef = doc(
+          db,
+          `artifacts/${appId}/users/${userId}/${coll}/${dateOrMonth}`
+        );
+        try {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const items = docSnap.data()[field] || [];
+            const idx = items.findIndex((i) => i.id === taskId);
+            if (idx > -1) {
+              items[idx].text = newText;
+              await updateDoc(docRef, { [field]: items });
+            }
+          }
+          inputEl.classList.add("hidden");
+          spanEl.textContent = newText;
+          spanEl.classList.remove("hidden");
+        } catch (e) {
+          console.error(`Error updating ${type} text:`, e);
+          showModal("Error", `Could not update. ${e.message}`, "alert");
+          inputEl.value = spanEl.textContent;
+          inputEl.classList.add("hidden");
+          spanEl.classList.remove("hidden");
+        }
+      }
+
+      function updateProgress(type, tasks) {
+        const completed = tasks.filter((t) => t.completed).length;
+        const total = tasks.length;
+        const perc = total > 0 ? Math.round((completed / total) * 100) : 0;
+        const progBar =
+          type === "daily" ? dailyProgressBar : monthlyProgressBar;
+        const progText =
+          type === "daily" ? dailyProgressText : monthlyProgressText;
+        const summary =
+          type === "daily" ? dailyCompletionSummary : monthlyCompletionSummary;
+        progBar.style.width = `${perc}%`;
+        progText.textContent = `${perc}%`;
+        summary.textContent = `${completed} of ${total} completed`;
+      }
+
+      async function addTask(
+        type,
+        textOverride = null,
+        completedOverride = false
+      ) {
+        const inputEl =
+          type === "daily" ? newDailyTaskInput : newMonthlyGoalInput;
+        const text =
+          textOverride !== null ? textOverride : inputEl.value.trim();
+        if (!text || !userId) return;
+        const dateOrMonth =
+          type === "daily" ? dailyDatePicker.value : monthlyGoalPicker.value;
+        const coll =
+          type === "daily" ? "dailyTasksByDate" : "monthlyGoalsByMonth";
+        const field = type === "daily" ? "tasks" : "goals";
+        const newTask = {
+          id: crypto.randomUUID(),
+          text,
+          completed: completedOverride,
+          createdAt: Timestamp.now(),
+        };
+        const docRef = doc(
+          db,
+          `artifacts/${appId}/users/${userId}/${coll}/${dateOrMonth}`
+        );
+        try {
+          const docSnap = await getDoc(docRef);
+          const currentItems =
+            docSnap.exists() && docSnap.data()[field]
+              ? docSnap.data()[field]
+              : [];
+          await setDoc(
+            docRef,
+            { [field]: [...currentItems, newTask] },
+            { merge: true }
+          );
+          if (textOverride === null) inputEl.value = "";
+        } catch (e) {
+          console.error(`Error adding ${type}:`, e);
+          showModal("Error", `Could not add. ${e.message}`, "alert");
+        }
+      }
+      addDailyTaskButton.addEventListener("click", () => addTask("daily"));
+      newDailyTaskInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") addTask("daily");
+      });
+      addMonthlyGoalButton.addEventListener("click", () => addTask("monthly"));
+      newMonthlyGoalInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") addTask("monthly");
+      });
+
+      async function toggleTaskComplete(taskId, type, isCompleted) {
+        if (!userId) return;
+        const dateOrMonth =
+          type === "daily" ? dailyDatePicker.value : monthlyGoalPicker.value;
+        const coll =
+          type === "daily" ? "dailyTasksByDate" : "monthlyGoalsByMonth";
+        const field = type === "daily" ? "tasks" : "goals";
+        const docRef = doc(
+          db,
+          `artifacts/${appId}/users/${userId}/${coll}/${dateOrMonth}`
+        );
+        try {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const items = docSnap.data()[field] || [];
+            const idx = items.findIndex((i) => i.id === taskId);
+            if (idx > -1) {
+              items[idx].completed = isCompleted;
+              await updateDoc(docRef, { [field]: items });
+            }
+          }
+        } catch (e) {
+          console.error(`Error toggling ${type}:`, e);
+          showModal("Error", `Could not update. ${e.message}`, "alert");
+        }
+      }
+
+      async function deleteTask(taskId, type) {
+        showModal(
+          `Delete ${type}`,
+          `Are you sure? This cannot be undone.`,
+          "confirm",
+          async () => {
+            if (!userId) return;
+            const dateOrMonth =
+              type === "daily"
+                ? dailyDatePicker.value
+                : monthlyGoalPicker.value;
+            const coll =
+              type === "daily" ? "dailyTasksByDate" : "monthlyGoalsByMonth";
+            const field = type === "daily" ? "tasks" : "goals";
+            const docRef = doc(
+              db,
+              `artifacts/${appId}/users/${userId}/${coll}/${dateOrMonth}`
+            );
+            try {
+              const docSnap = await getDoc(docRef);
+              if (docSnap.exists()) {
+                let items = docSnap.data()[field] || [];
+                await updateDoc(docRef, {
+                  [field]: items.filter((i) => i.id !== taskId),
+                });
+              }
+            } catch (e) {
+              console.error(`Error deleting ${type}:`, e);
+              showModal("Error", `Could not delete. ${e.message}`, "alert");
+            }
+          }
+        );
+      }
+
+      function loadData(type) {
+        if (!userId) return;
+        const pickerValue =
+          type === "daily" ? dailyDatePicker.value : monthlyGoalPicker.value;
+        if (!pickerValue) return;
+        const collName =
+          type === "daily" ? "dailyTasksByDate" : "monthlyGoalsByMonth";
+        const fieldName = type === "daily" ? "tasks" : "goals";
+
+        const unsub =
+          type === "daily" ? unsubscribeDailyTasks : unsubscribeMonthlyGoals;
+        unsub(); // Call previous unsubscribe
+
+        const docRef = doc(
+          db,
+          `artifacts/${appId}/users/${userId}/${collName}/${pickerValue}`
+        );
+        const newUnsub = onSnapshot(
+          docRef,
+          (docSnap) => {
+            const items = docSnap.exists()
+              ? docSnap.data()[fieldName] || []
+              : [];
+            renderTasks(
+              items.sort(
+                (a, b) => a.createdAt.toMillis() - b.createdAt.toMillis()
+              ),
+              type
+            );
+            updateProgress(type, items);
+          },
+          (error) => {
+            console.error(`Error listening to ${type}:`, error);
+            showModal(
+              "Error",
+              `Could not load ${type}. ${error.message}`,
+              "alert"
+            );
+            renderTasks([], type);
+            updateProgress(type, [], 0);
+          }
+        );
+
+        if (type === "daily") unsubscribeDailyTasks = newUnsub;
+        else unsubscribeMonthlyGoals = newUnsub;
+      }
+      const loadDailyTasks = () => loadData("daily");
+      const loadMonthlyGoals = () => loadData("monthly");
+
+      async function applyTasksForNext30Days(mode) {
+        if (!userId) return;
+        const currentDateStr = dailyDatePicker.value;
+        const currentTasksDocRef = doc(
+          db,
+          `artifacts/${appId}/users/${userId}/dailyTasksByDate/${currentDateStr}`
+        );
+        showModal(
+          `Apply Tasks (${mode})`,
+          `This will ${mode} tasks for next 30 days. Sure?`,
+          "confirm",
+          async () => {
+            try {
+              const snap = await getDoc(currentTasksDocRef);
+              const srcTasks =
+                snap.exists() && snap.data().tasks ? snap.data().tasks : [];
+              if (
+                srcTasks.length === 0 &&
+                (mode === "replace" || mode === "add")
+              ) {
+                showModal("Info", "No tasks on current day to apply.", "alert");
+                return;
+              }
+              const batch = writeBatch(db);
+              const startDate = new Date(currentDateStr + "T00:00:00");
+              for (let i = 0; i < 30; i++) {
+                const targetDate = new Date(startDate);
+                targetDate.setDate(startDate.getDate() + i + 1);
+                const targetDateStr = targetDate.toISOString().split("T")[0];
+                const targetDocRef = doc(
+                  db,
+                  `artifacts/${appId}/users/${userId}/dailyTasksByDate/${targetDateStr}`
+                );
+                const newInstances = srcTasks.map((t) => ({
+                  ...t,
+                  completed: false,
+                  id: crypto.randomUUID(),
+                  createdAt: Timestamp.now(),
+                }));
+                if (mode === "replace") {
+                  batch.set(targetDocRef, { tasks: newInstances });
+                } else {
+                  /* mode === 'add' */
+                  const targetSnap = await getDoc(targetDocRef);
+                  let existing =
+                    targetSnap.exists() && targetSnap.data().tasks
+                      ? targetSnap.data().tasks
+                      : [];
+                  const filteredNew = newInstances.filter(
+                    (nt) => !existing.some((et) => et.text === nt.text)
+                  );
+                  batch.set(
+                    targetDocRef,
+                    { tasks: [...existing, ...filteredNew] },
+                    { merge: true }
+                  );
+                }
+              }
+              await batch.commit();
+              showModal("Success", `Tasks applied (${mode}).`, "alert");
+            } catch (e) {
+              console.error(`Error applying tasks (${mode}):`, e);
+              showModal("Error", `Could not apply. ${e.message}`, "alert");
+            }
+          }
+        );
+      }
+
+      async function removeTasksForNext30Days() {
+        if (!userId) return;
+        const currentDateStr = dailyDatePicker.value;
+        showModal(
+          "Remove Next 30 Days Tasks",
+          "Remove ALL daily tasks for next 30 days (starting tomorrow)? Cannot be undone.",
+          "confirm",
+          async () => {
+            try {
+              const batch = writeBatch(db);
+              const startDate = new Date(currentDateStr + "T00:00:00");
+              for (let i = 0; i < 30; i++) {
+                const targetDate = new Date(startDate);
+                targetDate.setDate(startDate.getDate() + i + 1);
+                const targetDateStr = targetDate.toISOString().split("T")[0];
+                batch.set(
+                  doc(
+                    db,
+                    `artifacts/${appId}/users/${userId}/dailyTasksByDate/${targetDateStr}`
+                  ),
+                  { tasks: [] }
+                );
+              }
+              await batch.commit();
+              showModal("Success", "Tasks for next 30 days removed.", "alert");
+            } catch (e) {
+              console.error("Error removing next 30 days tasks:", e);
+              showModal("Error", `Could not remove. ${e.message}`, "alert");
+            }
+          }
+        );
+      }
+
+      async function removeGoalsForCurrentMonth() {
+        if (!userId) return;
+        const selectedMonth = monthlyGoalPicker.value;
+        if (!selectedMonth) {
+          showModal("Error", "No month selected.", "alert");
+          return;
+        }
+        showModal(
+          "Remove All Goals This Month",
+          `Remove ALL goals for ${selectedMonth}? Cannot be undone.`,
+          "confirm",
+          async () => {
+            try {
+              await setDoc(
+                doc(
+                  db,
+                  `artifacts/${appId}/users/${userId}/monthlyGoalsByMonth/${selectedMonth}`
+                ),
+                { goals: [] },
+                { merge: true }
+              );
+              showModal(
+                "Success",
+                `All goals for ${selectedMonth} removed.`,
+                "alert"
+              );
+            } catch (e) {
+              console.error("Error removing current month goals:", e);
+              showModal("Error", `Could not remove. ${e.message}`, "alert");
+            }
+          }
+        );
+      }
+      applyNext30AddBtn.addEventListener("click", () =>
+        applyTasksForNext30Days("add")
+      );
+      applyNext30ReplaceBtn.addEventListener("click", () =>
+        applyTasksForNext30Days("replace")
+      );
+      removeNext30Btn.addEventListener("click", removeTasksForNext30Days);
+      removeCurrentMonthGoalsBtn.addEventListener(
+        "click",
+        removeGoalsForCurrentMonth
+      );
+
+      async function callGeminiAPI(prompt) {
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const payload = {
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                suggested_tasks: { type: "ARRAY", items: { type: "STRING" } },
+              },
+              required: ["suggested_tasks"],
+            },
+          },
+        };
+        try {
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(`API fail ${response.status}: ${errBody}`);
+          }
+          const result = await response.json();
+          if (result.candidates?.[0]?.content?.parts?.[0])
+            return (
+              JSON.parse(result.candidates[0].content.parts[0].text)
+                .suggested_tasks || []
+            );
+          console.warn("Gemini API response unexpected:", result);
+          return [];
+        } catch (e) {
+          console.error("Error calling Gemini API:", e);
+          throw e;
+        }
+      }
+
+      async function handleBreakdownGoalClick(goalId, goalText) {
+        showGeminiSuggestionsModal(goalText);
+        try {
+          const prompt = `Break down monthly goal: "${goalText}" into 3-5 concise, actionable tasks.`;
+          const suggestions = await callGeminiAPI(prompt);
+          geminiLoadingIndicator.classList.add("hidden");
+          if (suggestions?.length > 0) {
+            geminiSuggestionsList.innerHTML = "";
+            suggestions.forEach((text, i) => {
+              const li = document.createElement("li");
+              li.className =
+                "flex items-center p-2 border-b border-lightBorder dark:border-darkBorder last:border-b-0";
+              const cb = document.createElement("input");
+              cb.type = "checkbox";
+              cb.id = `sug-${i}`;
+              cb.value = text;
+              cb.checked = true;
+              cb.className =
+                "form-checkbox h-4 w-4 text-primary rounded focus:ring-primary-dark mr-2";
+              const lbl = document.createElement("label");
+              lbl.htmlFor = `sug-${i}`;
+              lbl.textContent = text;
+              lbl.className = "text-sm flex-grow cursor-pointer";
+              li.append(cb, lbl);
+              geminiSuggestionsList.appendChild(li);
+            });
+            geminiSuggestionsActions.classList.remove("hidden");
+          } else {
+            geminiErrorMessage.textContent = "No suggestions received.";
+            geminiErrorMessage.classList.remove("hidden");
+          }
+        } catch (e) {
+          geminiLoadingIndicator.classList.add("hidden");
+          geminiErrorMessage.textContent = `Error generating: ${e.message}. Try again.`;
+          geminiErrorMessage.classList.remove("hidden");
+          console.error("BreakdownClick Error:", e);
+        }
+      }
+
+      geminiAddAsDailyButton.addEventListener("click", async () => {
+        const sel = Array.from(
+          geminiSuggestionsList.querySelectorAll("input:checked")
+        ).map((cb) => cb.value);
+        if (sel.length === 0) {
+          showModal("No Selection", "Select suggestions.", "alert");
+          return;
+        }
+        for (const text of sel) await addTask("daily", text);
+        showModal(
+          "Success",
+          `${sel.length} added as daily tasks for ${dailyDatePicker.value}.`,
+          "alert"
+        );
+        hideGeminiSuggestionsModal();
+      });
+
+      geminiAddAsMonthlyButton.addEventListener("click", async () => {
+        const sel = Array.from(
+          geminiSuggestionsList.querySelectorAll("input:checked")
+        ).map((cb) => cb.value);
+        if (sel.length === 0) {
+          showModal("No Selection", "Select suggestions.", "alert");
+          return;
+        }
+        for (const text of sel) await addTask("monthly", text);
+        showModal(
+          "Success",
+          `${sel.length} added as monthly goals for ${monthlyGoalPicker.value}.`,
+          "alert"
+        );
+        hideGeminiSuggestionsModal();
+      });
+
+      function setFooterYear() {
+        const yr = new Date().getFullYear();
+        document.getElementById("auth-current-year").textContent = yr;
+        document.getElementById("app-current-year").textContent = yr;
+      }
+      setFooterYear();
+      (async () => {
+        if (typeof __firebase_config !== "undefined") {
+          if (
+            typeof __initial_auth_token !== "undefined" &&
+            __initial_auth_token
+          ) {
+            try {
+              console.log("Signing in with custom token...");
+              await signInWithCustomToken(auth, __initial_auth_token);
+              console.log("Custom token sign-in success.");
+            } catch (e) {
+              console.error("Custom token sign-in error:", e);
+            }
+          } else {
+            console.log(
+              "No initial auth token. Waiting for onAuthStateChanged."
+            );
+          }
+        } else {
+          console.warn(
+            "Firebase config not defined. Ensure `firebaseConfig` is correctly set up if not in Canvas environment."
+          );
+          authView.classList.remove("hidden");
+          appView.classList.add("hidden");
+        }
+      })();
+    </script>
+  </body>
+</html>
