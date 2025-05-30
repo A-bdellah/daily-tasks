@@ -2030,9 +2030,9 @@
             currentDate.setUTCDate(startDate.getUTCDate() + i);
             const dateString = currentDate.toISOString().split("T")[0];
 
-            const dayDiv = document.createElement("div");
-            dayDiv.className = "flex flex-col items-center text-center";
-            dayDiv.dataset.date = dateString;
+            // const dayDiv = document.createElement("div");
+            // dayDiv.className = "flex flex-col items-center text-center";
+            // dayDiv.dataset.date = dateString;
 
             const dayNameSpan = document.createElement("span");
             dayNameSpan.textContent = dayNames[i];
