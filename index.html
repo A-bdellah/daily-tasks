@@ -245,6 +245,10 @@
       .dark .datepicker-green::placeholder {
         color: rgba(255, 255, 255, 0.7) !important;
       }
+      /* .buttons {
+        display: flex;
+        align-items: center;
+      } */
     </style>
   </head>
   <body class="bg-lightBg text-lightText dark:bg-darkBg dark:text-darkText">
@@ -478,7 +482,7 @@
             class="flex-grow sm:flex-grow-0 flex sm:justify-start"
             :class="{'justify-end': currentLanguage === 'en', 'justify-start': currentLanguage === 'ar'}"
           >
-            <div class="flex items-center">
+            <div class="flex w-full justify-between items-center">
               <button
                 id="language-toggle-button-app"
                 class="text-sm font-medium text-primary dark:text-primary-light hover:underline"
@@ -496,16 +500,18 @@
                   class="block text-right text-gray-500 dark:text-gray-400 text-[10px] sm:text-xs truncate max-w-[100px] sm:max-w-[150px] md:max-w-xs"
                 ></span>
               </div>
-              <button
-                id="theme-toggle-button-app"
-                class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              ></button>
-              <button
-                id="sign-out-button"
-                class="bg-danger hover:bg-danger-dark text-white text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded-md shadow transition duration-150 ml-2 sm:ml-3"
-              >
-                Sign Out
-              </button>
+              <div class="buttons flex items-center">
+                <button
+                  id="theme-toggle-button-app"
+                  class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                ></button>
+                <button
+                  id="sign-out-button"
+                  class="bg-danger hover:bg-danger-dark text-white text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded-md shadow transition duration-150 ml-2 sm:ml-3"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
