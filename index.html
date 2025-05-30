@@ -475,7 +475,8 @@
             Task Planner
           </h1>
           <div
-            class="flex-grow sm:flex-grow-0 flex justify-end sm:justify-start"
+            class="flex-grow sm:flex-grow-0 flex sm:justify-start"
+            :class="{'justify-end': currentLanguage === 'en', 'justify-start': currentLanguage === 'ar'}"
           >
             <div class="flex items-center">
               <button
@@ -824,8 +825,8 @@
 
       const userEmailDisplay = document.getElementById("user-email-display");
       const userIdDisplay = document.getElementById("user-id-display");
-      const userInfoContainer = document.getElementById("user-info-container"); // Added
-      const appHeaderTitle = document.getElementById("app-header-title"); // Added
+      const userInfoContainer = document.getElementById("user-info-container");
+      const appHeaderTitle = document.getElementById("app-header-title");
       const themeToggleButtonApp = document.getElementById(
         "theme-toggle-button-app"
       );
